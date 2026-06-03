@@ -9,6 +9,12 @@
     streamlit run src/streamlit_app.py
 """
 
+import sys
+from pathlib import Path
+
+# Добавляем корень проекта в sys.path, чтобы работал импорт src.*
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 import streamlit as st
 from src.crew_setup import authorship_crew
 
