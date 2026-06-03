@@ -3,3 +3,9 @@ __pycache__/
 .env
 *.pyc
 .streamlit/
+*.egg-info/
+dist/
+build/
+.idea/
+.vscode/
+*.swp

@@ -1,46 +1,68 @@
+"""
+Модуль определения агентов для системы определения авторства.
+
+Содержит конфигурацию LLM и определения двух CrewAI-агентов:
+- Stylistic Analyzer — анализирует стиль письма студента по нескольким эссе
+- Authorship Detector — сравнивает стилистический профиль с проверяемым текстом
+
+Модель и API-ключ загружаются из переменных окружения (.env).
+"""
+
 import os
-from crewai import Agent, Task, Crew, LLM
-import os
+from crewai import Agent, LLM
 from dotenv import load_dotenv
 
-load_dotenv() 
+# Загружаем переменные окружения из файла .env
+load_dotenv()
 
-API_KEY = os.getenv("CREWAI_API_KEY")  
+# Инициализация языковой модели.
+# Модель и ключ можно переопределить через переменные окружения:
+#   LLM_MODEL — название модели (по умолчанию gemini/gemini-2.0-flash)
+#   GOOGLE_API_KEY — ключ API Google Gemini
+LLM_MODEL = os.getenv("LLM_MODEL", "gemini/gemini-2.0-flash")
+API_KEY = os.getenv("GOOGLE_API_KEY")
+
+if not API_KEY:
+    raise ValueError(
+        "API-ключ не найден. Установите GOOGLE_API_KEY в файле .env "
+        "или в переменных окружения."
+    )
+
 my_llm = LLM(
-    model="gemini/gemini-3-flash-preview",
+    model=LLM_MODEL,
     api_key=API_KEY
 )
 
+# ---------------------------------------------------------------------------
+# Агенты
+# ---------------------------------------------------------------------------
+
 style_analyzer = Agent(
-    role="Stylistic Analyzer",
-    goal="Analyze the student's writing style from {essay1}, {essay2}, and {essay3}",
-    backstory="Expert in linguistic analysis and authorship identification.",
+    role="Анализатор стиля",
+    goal=(
+        "Проанализировать стиль письма студента по предоставленным эссе "
+        "и составить подробный стилистический профиль."
+    ),
+    backstory=(
+        "Вы — эксперт по лингвистическому анализу и идентификации авторства. "
+        "Вы умеете распознавать паттерны в словаре, структуре предложений, "
+        "тоне и письменных привычках автора."
+    ),
     llm=my_llm,
-    verbose=True
+    verbose=True,
 )
 
 authorship_detector = Agent(
-    role="Authorship Detector",
-    goal="Compare the style of {suspicious_text} with the profile and determine probability",
-    backstory="Specialist in academic integrity and plagiarism detection.",
+    role="Детектор авторства",
+    goal=(
+        "Сравнить стилистический профиль автора с проверяемым текстом "
+        "и определить вероятность того, что текст написан тем же автором."
+    ),
+    backstory=(
+        "Вы — специалист по академической честности и выявлению плагиата. "
+        "Вы умеете сравнивать стили письма и предоставлять обоснованные "
+        "оценки авторства с доказательствами."
+    ),
     llm=my_llm,
-    verbose=True
-)
-
-task1 = Task(
-    description="Analyze the writing style of these three essays: {essay1}, {essay2}, {essay3}",
-    expected_output="A detailed stylistic profile of the author.",
-    agent=style_analyzer
-)
-
-task2 = Task(
-    description="Compare the style of this text: {suspicious_text} with the created profile.",
-    expected_output="Probability of authorship and explanation.",
-    agent=authorship_detector
-)
-
-crew = Crew(
-    agents=[style_analyzer, authorship_detector],
-    tasks=[task1, task2],
-    verbose=True
+    verbose=True,
 )
